@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nathan's Schedule</title>
+  <style>
+    :root {
+      --ink: #1f2933;
+      --muted: #6b7280;
+      --line: #dde5ec;
+      --surface: #ffffff;
+      --wash: #f4f7f9;
+      --office-followup: #93c47d;
+      --office-intake: #6fa8dc;
+      --tele-followup: #f6b26b;
+      --tele-intake: #c27ba0;
+      --shadow: 0 24px 70px rgba(31, 41, 51, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 12% 10%, rgba(147, 196, 125, 0.22), transparent 28%),
+        linear-gradient(135deg, #f8fafc 0%, #edf4f6 48%, #f7f4f6 100%);
+    }
+
+    main {
+      width: min(980px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 24px 0;
+    }
+
+    .schedule-shell {
+      overflow: hidden;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.88);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+    }
+
+    .header {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 18px;
+      align-items: end;
+      padding: 24px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(120deg, rgba(255, 255, 255, 0.95), rgba(239, 246, 248, 0.92));
+    }
+
+    .eyebrow {
+      margin: 0 0 6px;
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2rem, 6vw, 4rem);
+      line-height: 0.92;
+      letter-spacing: 0;
+    }
+
+    .stats {
+      display: grid;
+      gap: 10px;
+      min-width: 110px;
+    }
+
+    .stat {
+      padding: 14px 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+    }
+
+    .stat span {
+      display: block;
+      color: var(--muted);
+      font-size: clamp(0.68rem, 2.7vw, 0.78rem);
+      font-weight: 700;
+      overflow-wrap: anywhere;
+      text-transform: uppercase;
+    }
+
+    .stat strong {
+      display: block;
+      margin-top: 3px;
+      font-size: 1.35rem;
+    }
+
+    .content {
+      display: block;
+      padding: 24px;
+    }
+
+    .timeline {
+      position: relative;
+      display: grid;
+      gap: 7px;
+    }
+
+    .slot {
+      display: grid;
+      grid-template-columns: 72px minmax(0, 1fr);
+      gap: 14px;
+      align-items: stretch;
+      min-height: 46px;
+    }
+
+    .slot.duration-60 {
+      min-height: 99px;
+    }
+
+    .time {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      color: var(--muted);
+      font-size: 0.92rem;
+      font-weight: 650;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .appointment {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      min-width: 0;
+      padding: 11px 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.72);
+    }
+
+    .appointment.open {
+      background:
+        repeating-linear-gradient(135deg, rgba(148, 163, 184, 0.12) 0 8px, transparent 8px 16px),
+        rgba(255, 255, 255, 0.72);
+    }
+
+    .appointment.booked {
+      border-color: rgba(31, 41, 51, 0.08);
+      box-shadow: 0 10px 28px rgba(31, 41, 51, 0.08);
+    }
+
+    .appointment.duration-60 {
+      align-items: flex-start;
+      padding-block: 15px;
+    }
+
+    .appointment.tele-followup {
+      background: linear-gradient(135deg, rgba(246, 178, 107, 0.96), rgba(246, 178, 107, 0.72));
+    }
+
+    .appointment.office-intake {
+      background: linear-gradient(135deg, rgba(111, 168, 220, 0.98), rgba(111, 168, 220, 0.72));
+    }
+
+    .appointment span {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-weight: 650;
+    }
+
+    .appointment small {
+      flex: 0 0 auto;
+      color: rgba(31, 41, 51, 0.72);
+      font-size: 0.78rem;
+      font-weight: 650;
+      text-transform: uppercase;
+    }
+
+    .day-end {
+      min-height: 24px;
+    }
+
+    .end-marker {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 0.8rem;
+      font-weight: 650;
+    }
+
+    .end-marker::before {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: var(--line);
+    }
+
+    @media (max-width: 760px) {
+      main {
+        width: min(100% - 8px, 560px);
+        padding: 4px 0;
+      }
+
+      .header,
+      .content {
+        padding: 8px 10px;
+      }
+
+      .header {
+        gap: 6px;
+        align-items: center;
+      }
+
+      .eyebrow {
+        margin-bottom: 2px;
+        font-size: 0.58rem;
+        letter-spacing: 0.1em;
+      }
+
+      h1 {
+        font-size: clamp(1.35rem, 6.5vw, 1.75rem);
+        line-height: 0.95;
+      }
+
+      .stats {
+        min-width: 0;
+      }
+
+      .stat {
+        padding: 6px 8px;
+      }
+
+      .stat span {
+        font-size: 0.58rem;
+      }
+
+      .stat strong {
+        margin-top: 1px;
+        font-size: 1rem;
+      }
+
+      .content {
+        gap: 10px;
+      }
+
+      .slot {
+        grid-template-columns: 42px minmax(0, 1fr);
+        gap: 6px;
+        min-height: 27px;
+      }
+
+      .slot.duration-60 {
+        min-height: 57px;
+      }
+
+      .timeline {
+        gap: 3px;
+      }
+
+      .time {
+        font-size: 0.7rem;
+      }
+
+      .appointment {
+        padding: 5px 7px;
+        gap: 6px;
+      }
+
+      .appointment.duration-60 {
+        padding-block: 7px;
+      }
+
+      .appointment span {
+        font-size: 0.73rem;
+      }
+
+      .appointment small {
+        font-size: 0.54rem;
+      }
+
+      .day-end {
+        min-height: 18px;
+      }
+
+      .end-marker {
+        gap: 7px;
+        font-size: 0.62rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="schedule-shell" aria-labelledby="schedule-title">
+      <header class="header">
+        <div>
+          <p class="eyebrow">Next day of work</p>
+          <h1 id="schedule-title">Monday</h1>
+        </div>
+        <div class="stats" aria-label="Schedule summary">
+          <div class="stat">
+            <span>Patients</span>
+            <strong>6</strong>
+          </div>
+        </div>
+      </header>
+
+      <div class="content">
+        <section class="timeline" aria-label="Monday appointment schedule">
+          <div class="slot">
+            <div class="time">9:00</div>
+            <div class="appointment booked tele-followup"><span>🖥️ Tele follow-up</span><small>30 min</small></div>
+          </div>
+          <div class="slot">
+            <div class="time">9:30</div>
+            <div class="appointment open" aria-label="Available 30-minute slot"><span aria-hidden="true"></span><small>30 min</small></div>
+          </div>
+          <div class="slot">
+            <div class="time">10:00</div>
+            <div class="appointment open" aria-label="Available 30-minute slot"><span aria-hidden="true"></span><small>30 min</small></div>
+          </div>
+          <div class="slot">
+            <div class="time">10:30</div>
+            <div class="appointment booked tele-followup"><span>🖥️ Tele follow-up</span><small>30 min</small></div>
+          </div>
+          <div class="slot duration-60">
+            <div class="time">11:00</div>
+            <div class="appointment booked office-intake duration-60"><span>🚗 Office intake</span><small>60 min</small></div>
+          </div>
+          <div class="slot">
+            <div class="time">12:00</div>
+            <div class="appointment open" aria-label="Available 30-minute slot"><span aria-hidden="true"></span><small>30 min</small></div>
+          </div>
+          <div class="slot">
+            <div class="time">12:30</div>
+            <div class="appointment open" aria-label="Available 30-minute slot"><span aria-hidden="true"></span><small>30 min</small></div>
+          </div>
+          <div class="slot">
+            <div class="time">1:00</div>
+            <div class="appointment booked tele-followup"><span>🖥️ Tele follow-up</span><small>30 min</small></div>
+          </div>
+          <div class="slot">
+            <div class="time">1:30</div>
+            <div class="appointment open" aria-label="Available 30-minute slot"><span aria-hidden="true"></span><small>30 min</small></div>
+          </div>
+          <div class="slot">
+            <div class="time">2:00</div>
+            <div class="appointment open" aria-label="Available 30-minute slot"><span aria-hidden="true"></span><small>30 min</small></div>
+          </div>
+          <div class="slot">
+            <div class="time">2:30</div>
+            <div class="appointment open" aria-label="Available 30-minute slot"><span aria-hidden="true"></span><small>30 min</small></div>
+          </div>
+          <div class="slot">
+            <div class="time">3:00</div>
+            <div class="appointment booked tele-followup"><span>🖥️ Tele follow-up</span><small>30 min</small></div>
+          </div>
+          <div class="slot">
+            <div class="time">3:30</div>
+            <div class="appointment open" aria-label="Available 30-minute slot"><span aria-hidden="true"></span><small>30 min</small></div>
+          </div>
+          <div class="slot">
+            <div class="time">4:00</div>
+            <div class="appointment open" aria-label="Available 30-minute slot"><span aria-hidden="true"></span><small>30 min</small></div>
+          </div>
+          <div class="slot">
+            <div class="time">4:30</div>
+            <div class="appointment booked tele-followup"><span>🖥️ Tele follow-up</span><small>30 min</small></div>
+          </div>
+          <div class="slot day-end">
+            <div class="time">5:00</div>
+            <div class="end-marker" aria-label="End of work day">End</div>
+          </div>
+        </section>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
