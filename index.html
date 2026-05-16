@@ -166,8 +166,16 @@
       background: linear-gradient(135deg, rgba(246, 178, 107, 0.96), rgba(246, 178, 107, 0.72));
     }
 
+    .appointment.tele-intake {
+      background: linear-gradient(135deg, rgba(194, 123, 160, 0.98), rgba(194, 123, 160, 0.72));
+    }
+
     .appointment.office-intake {
       background: linear-gradient(135deg, rgba(111, 168, 220, 0.98), rgba(111, 168, 220, 0.72));
+    }
+
+    .appointment.office-followup {
+      background: linear-gradient(135deg, rgba(147, 196, 125, 0.98), rgba(147, 196, 125, 0.72));
     }
 
     .appointment span {
@@ -204,6 +212,16 @@
       flex: 1;
       height: 1px;
       background: var(--line);
+    }
+
+    .loading,
+    .error {
+      padding: 18px;
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      color: var(--muted);
+      font-size: 0.95rem;
+      text-align: center;
     }
 
     @media (max-width: 760px) {
@@ -297,6 +315,12 @@
         gap: 7px;
         font-size: 0.62rem;
       }
+
+      .loading,
+      .error {
+        padding: 12px;
+        font-size: 0.76rem;
+      }
     }
   </style>
 </head>
@@ -318,73 +342,174 @@
 
       <div class="content">
         <section class="timeline" aria-label="Monday appointment schedule">
-          <div class="slot">
-            <div class="time">9:00</div>
-            <div class="appointment booked tele-followup"><span>🖥️ Tele follow-up</span><small>30 min</small></div>
-          </div>
-          <div class="slot">
-            <div class="time">9:30</div>
-            <div class="appointment open" aria-label="Available 30-minute slot"><span aria-hidden="true"></span><small>30 min</small></div>
-          </div>
-          <div class="slot">
-            <div class="time">10:00</div>
-            <div class="appointment open" aria-label="Available 30-minute slot"><span aria-hidden="true"></span><small>30 min</small></div>
-          </div>
-          <div class="slot">
-            <div class="time">10:30</div>
-            <div class="appointment booked tele-followup"><span>🖥️ Tele follow-up</span><small>30 min</small></div>
-          </div>
-          <div class="slot duration-60">
-            <div class="time">11:00</div>
-            <div class="appointment booked office-intake duration-60"><span>🚗 Office intake</span><small>60 min</small></div>
-          </div>
-          <div class="slot">
-            <div class="time">12:00</div>
-            <div class="appointment open" aria-label="Available 30-minute slot"><span aria-hidden="true"></span><small>30 min</small></div>
-          </div>
-          <div class="slot">
-            <div class="time">12:30</div>
-            <div class="appointment open" aria-label="Available 30-minute slot"><span aria-hidden="true"></span><small>30 min</small></div>
-          </div>
-          <div class="slot">
-            <div class="time">1:00</div>
-            <div class="appointment booked tele-followup"><span>🖥️ Tele follow-up</span><small>30 min</small></div>
-          </div>
-          <div class="slot">
-            <div class="time">1:30</div>
-            <div class="appointment open" aria-label="Available 30-minute slot"><span aria-hidden="true"></span><small>30 min</small></div>
-          </div>
-          <div class="slot">
-            <div class="time">2:00</div>
-            <div class="appointment open" aria-label="Available 30-minute slot"><span aria-hidden="true"></span><small>30 min</small></div>
-          </div>
-          <div class="slot">
-            <div class="time">2:30</div>
-            <div class="appointment open" aria-label="Available 30-minute slot"><span aria-hidden="true"></span><small>30 min</small></div>
-          </div>
-          <div class="slot">
-            <div class="time">3:00</div>
-            <div class="appointment booked tele-followup"><span>🖥️ Tele follow-up</span><small>30 min</small></div>
-          </div>
-          <div class="slot">
-            <div class="time">3:30</div>
-            <div class="appointment open" aria-label="Available 30-minute slot"><span aria-hidden="true"></span><small>30 min</small></div>
-          </div>
-          <div class="slot">
-            <div class="time">4:00</div>
-            <div class="appointment open" aria-label="Available 30-minute slot"><span aria-hidden="true"></span><small>30 min</small></div>
-          </div>
-          <div class="slot">
-            <div class="time">4:30</div>
-            <div class="appointment booked tele-followup"><span>🖥️ Tele follow-up</span><small>30 min</small></div>
-          </div>
-          <div class="slot day-end">
-            <div class="time">5:00</div>
-            <div class="end-marker" aria-label="End of work day">End</div>
-          </div>
+          <div class="loading">Loading schedule...</div>
         </section>
       </div>
     </section>
   </main>
+  <script>
+    const SHEET_ID = "1v5Czq5A28AyGo3gzPbaf77S1LT6Ai7SK93XzDl1piSM";
+    const SHEET_GID = "1927189838";
+    const SHEET_RANGE = "A1:H25";
+
+    const fallbackDetails = {
+      b: { className: "office-intake", duration: 60, label: "🚗 Office intake" },
+      g: { className: "office-followup", duration: 30, label: "🚗 Office follow-up" },
+      o: { className: "tele-followup", duration: 30, label: "🖥️ Tele follow-up" },
+      p: { className: "tele-intake", duration: 60, label: "🖥️ Tele intake" }
+    };
+
+    function cellValue(row, index) {
+      const cell = row?.c?.[index];
+      if (!cell) return "";
+      return String(cell.f ?? cell.v ?? "").trim();
+    }
+
+    function buildDetails(rows) {
+      const details = { ...fallbackDetails };
+
+      rows.forEach((row) => {
+        const colorName = cellValue(row, 6).toLowerCase();
+        const combo = cellValue(row, 7).toLowerCase();
+        if (!colorName || !/^[ot][36]$/.test(combo)) return;
+
+        const code = colorName.charAt(0);
+        const isOffice = combo.charAt(0) === "o";
+        const duration = combo.charAt(1) === "6" ? 60 : 30;
+        const kind = duration === 60 ? "intake" : "follow-up";
+        const prefix = isOffice ? "🚗 Office" : "🖥️ Tele";
+        const classKind = duration === 60 ? "intake" : "followup";
+
+        details[code] = {
+          className: `${isOffice ? "office" : "tele"}-${classKind}`,
+          duration,
+          label: `${prefix} ${kind}`
+        };
+      });
+
+      return details;
+    }
+
+    function createElement(tag, className, text) {
+      const element = document.createElement(tag);
+      if (className) element.className = className;
+      if (text) element.textContent = text;
+      return element;
+    }
+
+    function createSlot(time, content, extraClass = "") {
+      const slot = createElement("div", `slot ${extraClass}`.trim());
+      slot.append(createElement("div", "time", time));
+      slot.append(content);
+      return slot;
+    }
+
+    function createOpenSlot(time) {
+      const appointment = createElement("div", "appointment open");
+      appointment.setAttribute("aria-label", "Available 30-minute slot");
+      const spacer = createElement("span");
+      spacer.setAttribute("aria-hidden", "true");
+      appointment.append(spacer, createElement("small", "", "30 min"));
+      return createSlot(time, appointment);
+    }
+
+    function createBookedSlot(time, detail) {
+      const isHour = detail.duration === 60;
+      const appointment = createElement("div", `appointment booked ${detail.className}${isHour ? " duration-60" : ""}`);
+      appointment.append(createElement("span", "", detail.label), createElement("small", "", `${detail.duration} min`));
+      return createSlot(time, appointment, isHour ? "duration-60" : "");
+    }
+
+    function createEndSlot(time) {
+      const marker = createElement("div", "end-marker", "End");
+      marker.setAttribute("aria-label", "End of work day");
+      return createSlot(time, marker, "day-end");
+    }
+
+    function renderSchedule(response) {
+      if (response.status !== "ok") throw new Error("Google Sheets returned an error.");
+
+      const rows = response.table.rows;
+      const day = cellValue(rows[0], 1) || "Schedule";
+      const patientCount = cellValue(rows[1], 1) || "0";
+      const details = buildDetails(rows);
+      const scheduleRows = rows.slice(2, 19).filter((row) => cellValue(row, 0));
+      const timeline = document.querySelector(".timeline");
+
+      document.querySelector("#schedule-title").textContent = day;
+      document.title = `${day} Schedule`;
+      timeline.setAttribute("aria-label", `${day} appointment schedule`);
+      document.querySelector(".stat strong").textContent = patientCount;
+      timeline.textContent = "";
+
+      let skipNext = false;
+      scheduleRows.forEach((row, index) => {
+        const time = cellValue(row, 0);
+        const code = cellValue(row, 1).toLowerCase();
+        const isLastRow = index === scheduleRows.length - 1;
+
+        if (skipNext) {
+          skipNext = false;
+          return;
+        }
+
+        if (isLastRow) {
+          timeline.append(createEndSlot(time));
+          return;
+        }
+
+        if (!code) {
+          timeline.append(createOpenSlot(time));
+          return;
+        }
+
+        const detail = details[code] || fallbackDetails[code];
+        if (!detail) {
+          timeline.append(createOpenSlot(time));
+          return;
+        }
+
+        timeline.append(createBookedSlot(time, detail));
+        if (detail.duration === 60) skipNext = true;
+      });
+    }
+
+    function showError(error) {
+      const timeline = document.querySelector(".timeline");
+      timeline.innerHTML = "";
+      const message = createElement("div", "error", "Couldn't load the Google Sheet. Check that the sheet is shared or published.");
+      timeline.append(message);
+      console.error(error);
+    }
+
+    function loadSchedule() {
+      const callbackName = `scheduleCallback_${Date.now()}`;
+      const url = new URL(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq`);
+      url.searchParams.set("tqx", `out:json;responseHandler:${callbackName}`);
+      url.searchParams.set("gid", SHEET_GID);
+      url.searchParams.set("range", SHEET_RANGE);
+      url.searchParams.set("headers", "0");
+      url.searchParams.set("cachebust", Date.now());
+
+      window[callbackName] = (response) => {
+        try {
+          renderSchedule(response);
+        } catch (error) {
+          showError(error);
+        } finally {
+          delete window[callbackName];
+          document.querySelector(`script[data-callback="${callbackName}"]`)?.remove();
+        }
+      };
+
+      const script = document.createElement("script");
+      script.src = url.toString();
+      script.dataset.callback = callbackName;
+      script.onerror = () => showError(new Error("Google Sheet request failed."));
+      document.body.append(script);
+    }
+
+    loadSchedule();
+  </script>
 </body>
 </html>
